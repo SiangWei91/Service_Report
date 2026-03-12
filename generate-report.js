@@ -1,15 +1,45 @@
 const PdfPrinter = require('pdfmake');
+const { jsPDF } = require('jspdf');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
-// ══════ Fonts (built-in PDF standard fonts, no files needed) ══════
-const printer = new PdfPrinter({
-  Helvetica: {
-    normal: 'Helvetica',
-    bold: 'Helvetica-Bold',
-    italics: 'Helvetica-Oblique',
-    bolditalics: 'Helvetica-BoldOblique'
+// ══════ Load Roboto Fonts from pdfmake's vfs_fonts ══════
+function loadFonts() {
+  try {
+    const vfsFonts = require('pdfmake/build/vfs_fonts');
+    const vfs = (vfsFonts.pdfMake && vfsFonts.pdfMake.vfs) || vfsFonts;
+    if (!vfs['Roboto-Regular.ttf']) throw new Error('Roboto not found in vfs');
+    console.log('Roboto fonts loaded successfully.');
+    return {
+      fonts: {
+        Roboto: {
+          normal: Buffer.from(vfs['Roboto-Regular.ttf'], 'base64'),
+          bold: Buffer.from(vfs['Roboto-Medium.ttf'], 'base64'),
+          italics: Buffer.from(vfs['Roboto-Italic.ttf'], 'base64'),
+          bolditalics: Buffer.from(vfs['Roboto-MediumItalic.ttf'], 'base64')
+        }
+      },
+      fontName: 'Roboto'
+    };
+  } catch (e) {
+    console.warn('Roboto not available, falling back to Helvetica:', e.message);
+    return {
+      fonts: {
+        Helvetica: {
+          normal: 'Helvetica',
+          bold: 'Helvetica-Bold',
+          italics: 'Helvetica-Oblique',
+          bolditalics: 'Helvetica-BoldOblique'
+        }
+      },
+      fontName: 'Helvetica'
+    };
   }
-});
+}
+
+const { fonts, fontName } = loadFonts();
+const printer = new PdfPrinter(fonts);
 
 // ══════ Config ══════
 const CONFIG = {
@@ -284,7 +314,7 @@ const s4Pool = [
 ];
 
 // ══════════════════════════════════════════════════════════════
-// ══════ PDF GENERATION ══════
+// ══════ IT SERVICE REPORT (pdfmake + Roboto) ══════
 // ══════════════════════════════════════════════════════════════
 
 function generateITReport(info, signatureBase64) {
@@ -294,7 +324,6 @@ function generateITReport(info, signatureBase64) {
   const sigDateStr = `${year}-${pad(month + 1)}-${pad(lastDay)}`;
   const sigDate = fmtDate(sigDateStr);
 
-  // Random data
   const s1Count = randInt(1, 2), s1Items = pick(s1Pool, s1Count), s1Dates = randDates(s1Count, year, month);
   const s2Count = randInt(1, 2), s2Items = pick(s2Pool, s2Count);
   const s3Count = randInt(1, 2), s3Items = pick(s3Pool, s3Count);
@@ -329,7 +358,7 @@ function generateITReport(info, signatureBase64) {
   if (signatureBase64) {
     sig.push({ columns: [
       { text: 'Signature:', bold: true, fontSize: 9, width: 65, margin: [0, 12, 0, 0] },
-      { image: signatureBase64, width: 100, height: 40 }
+      { image: signatureBase64, width: 100, height: 50 }
     ]});
   } else {
     sig.push({ text: [{ text: 'Signature:  ', bold: true, fontSize: 9 }, { text: '________________________', color: G }], margin: [0, 5, 0, 0] });
@@ -337,7 +366,7 @@ function generateITReport(info, signatureBase64) {
 
   const dd = {
     pageSize: 'A4', pageMargins: [40, 40, 40, 40],
-    defaultStyle: { font: 'Helvetica' },
+    defaultStyle: { font: fontName },
     content: [
       { text: 'IT SERVICE REPORT', fontSize: 18, bold: true, color: P, alignment: 'center' },
       { text: 'IT Service / IT Support Department', fontSize: 10, color: G, alignment: 'center', margin: [0, 2, 0, 3] },
@@ -366,45 +395,70 @@ function generateITReport(info, signatureBase64) {
   return { docDefinition: dd, serviceNo, period, sigDate };
 }
 
+// ══════════════════════════════════════════════════════════════
+// ══════ PAYMENT REQUEST (jsPDF - exact same as browser) ══════
+// ══════════════════════════════════════════════════════════════
+
 function generatePaymentRequest(serviceNo, sigDate, signatureBase64) {
   const prNo = serviceNo.replace('IT-', 'PR-');
-  const G = '#95a5a6';
+  const doc = new jsPDF();
 
-  const dd = {
-    pageSize: 'A4', pageMargins: [40, 40, 40, 40],
-    defaultStyle: { font: 'Helvetica' },
-    content: [
-      { text: 'PAYMENT REQUEST', fontSize: 20, bold: true, alignment: 'center', margin: [0, 0, 0, 20] },
-      { columns: [
-        { text: [{ text: 'Date: ', bold: true, fontSize: 12 }, { text: sigDate, fontSize: 12 }] },
-        { text: [{ text: 'PR No: ', bold: true, fontSize: 10 }, { text: prNo, fontSize: 10 }], alignment: 'right' }
-      ], margin: [0, 0, 0, 20] },
-      { text: [{ text: 'Name: ', bold: true }, { text: CONFIG.name }], fontSize: 12, margin: [0, 0, 0, 15] },
-      { text: [{ text: 'IC/NRIC: ', bold: true }, { text: CONFIG.ic }], fontSize: 12, margin: [0, 0, 0, 20] },
-      { text: [{ text: 'Bank Name: ', bold: true }, { text: CONFIG.bank }], fontSize: 12, margin: [0, 0, 0, 15] },
-      { text: [{ text: 'Account Number: ', bold: true }, { text: CONFIG.account }], fontSize: 12, margin: [0, 0, 0, 20] },
-      { text: 'Expense Items:', fontSize: 12, bold: true, margin: [0, 0, 0, 10] },
-      {
-        table: {
-          headerRows: 1, widths: ['*', 100],
-          body: [
-            [{ text: 'Description', bold: true, margin: [5, 3] }, { text: 'Amount', bold: true, margin: [5, 3] }],
-            [{ text: 'IT Service', margin: [5, 3] }, { text: `${CONFIG.currency} ${CONFIG.amount.toFixed(2)}`, margin: [5, 3] }]
-          ]
-        },
-        layout: { hLineWidth: () => 0.5, vLineWidth: () => 0.5, hLineColor: () => '#ccc', vLineColor: () => '#ccc' },
-        margin: [0, 0, 0, 10]
-      },
-      { text: [{ text: 'Total Amount: ', bold: true }, { text: `${CONFIG.currency} ${CONFIG.amount.toFixed(2)}` }], fontSize: 12, margin: [0, 10, 0, 20] },
-      { text: [{ text: 'Submitted Date: ', bold: true }, { text: sigDate }], fontSize: 12, margin: [0, 20, 0, 20] },
-      { text: 'Signature:', fontSize: 12, margin: [0, 0, 0, 5] },
-      signatureBase64
-        ? { image: signatureBase64, width: 100, height: 40, margin: [0, 3, 0, 0] }
-        : { text: '________________________', color: G, margin: [0, 5, 0, 0] }
-    ]
-  };
+  doc.setFontSize(20);
+  doc.setFont(undefined, 'bold');
+  doc.text('PAYMENT REQUEST', 105, 30, { align: 'center' });
 
-  return { docDefinition: dd, prNo };
+  doc.setFontSize(12);
+  doc.setFont(undefined, 'normal');
+  doc.text(`Date: ${sigDate}`, 20, 50);
+  doc.setFontSize(10);
+  doc.text(`PR No: ${prNo}`, 130, 50);
+  doc.setFontSize(12);
+
+  doc.text(`Name: ${CONFIG.name}`, 20, 70);
+  doc.text(`IC/NRIC: ${CONFIG.ic}`, 20, 85);
+  doc.text(`Bank Name: ${CONFIG.bank}`, 20, 105);
+  doc.text(`Account Number: ${CONFIG.account}`, 20, 120);
+  doc.text('Expense Items:', 20, 140);
+
+  let y = 155;
+  doc.setFont(undefined, 'bold');
+  doc.text('Description', 25, y);
+  doc.text('Amount', 160, y);
+  doc.line(20, y + 3, 190, y + 3);
+  y += 15;
+
+  doc.setFont(undefined, 'normal');
+  doc.text('IT Service', 25, y);
+  doc.text(`${CONFIG.currency} ${CONFIG.amount.toFixed(2)}`, 160, y);
+  y += 12;
+
+  doc.line(20, y, 190, y);
+  y += 10;
+
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total Amount: ${CONFIG.currency} ${CONFIG.amount.toFixed(2)}`, 25, y);
+  doc.setFont(undefined, 'normal');
+
+  y += 20;
+  doc.text(`Submitted Date: ${sigDate}`, 20, y);
+
+  y += 20;
+  doc.text('Signature:', 20, y);
+  if (signatureBase64) {
+    try {
+      doc.addImage(signatureBase64, 'PNG', 20, y + 3, 50, 25);
+    } catch (e) {
+      console.warn('Could not add signature to Payment Request:', e.message);
+      doc.line(20, y + 15, 100, y + 15);
+    }
+  } else {
+    doc.line(20, y + 15, 100, y + 15);
+  }
+
+  doc.rect(15, 15, 180, 260);
+
+  const buffer = Buffer.from(doc.output('arraybuffer'));
+  return { buffer, prNo };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -455,15 +509,15 @@ async function main() {
   // Fetch signature
   const signatureBase64 = await fetchSignature(CONFIG.signatureUrl);
 
-  // Generate IT Service Report
+  // Generate IT Service Report (pdfmake + Roboto)
   const itReport = generateITReport(info, signatureBase64);
   const itBuffer = await generatePdfBuffer(itReport.docDefinition);
   const itFileName = `IT_Report_${CONFIG.name.replace(/\s+/g, '_')}_${period.replace(/\s+/g, '_')}.pdf`;
   console.log(`IT Report generated: ${itFileName}`);
 
-  // Generate Payment Request
+  // Generate Payment Request (jsPDF - same as browser)
   const pr = generatePaymentRequest(itReport.serviceNo, itReport.sigDate, signatureBase64);
-  const prBuffer = await generatePdfBuffer(pr.docDefinition);
+  const prBuffer = pr.buffer;
   const prFileName = `Payment_Request_${pr.prNo}.pdf`;
   console.log(`Payment Request generated: ${prFileName}`);
 

@@ -6,6 +6,7 @@
     "generate": "node generate-report.js"
   },
   "dependencies": {
+    "jspdf": "^2.5.1",
     "pdfmake": "^0.2.10",
     "nodemailer": "^6.9.0"
   }
