@@ -1,0 +1,12 @@
+{
+  "name": "service-report-generator",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "generate": "node generate-report.js"
+  },
+  "dependencies": {
+    "pdfmake": "^0.2.10",
+    "nodemailer": "^6.9.0"
+  }
+}

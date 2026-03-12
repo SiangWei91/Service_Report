@@ -1,0 +1,21 @@
+name: Monthly IT Report
+
+on:
+  schedule:
+    # 9am Singapore time (UTC+8) on the 1st of every month = 1am UTC
+    - cron: '0 1 1 * *'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  generate-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - run: node generate-report.js
+        env:
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
