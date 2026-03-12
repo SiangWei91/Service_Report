@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IT Tools - Report & Voucher</title>
+<title>IT Tools - Report & Invoice</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -116,7 +116,7 @@
 <!-- ══════ Tab Navigation ══════ -->
 <div class="tab-nav">
   <button class="active" onclick="switchTab('tab-report', this)">IT Service Report</button>
-  <button onclick="switchTab('tab-voucher', this)">Payment Voucher</button>
+  <button onclick="switchTab('tab-voucher', this)">Invoice</button>
 </div>
 
 <!-- ══════════════════════════════════════════════ -->
@@ -179,26 +179,26 @@
 </div>
 
 <!-- ══════════════════════════════════════════════ -->
-<!-- ══════ TAB 2: PAYMENT VOUCHER ══════ -->
+<!-- ══════ TAB 2: INVOICE ══════ -->
 <!-- ══════════════════════════════════════════════ -->
 <div class="tab-content" id="tab-voucher">
 <div class="pv-container">
-  <h1>Payment Voucher</h1>
+  <h1>Invoice</h1>
   <form id="voucherForm">
     <div class="voucher-header">
-      <div class="voucher-number">Voucher No: <span id="voucherNumber">PV-001</span></div>
+      <div class="voucher-number">Invoice No: <span id="invoiceNumber"></span></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label for="pvDate">Date:</label><input type="date" id="pvDate" name="date" required></div>
-      <div class="form-group"><label for="voucherNo">Voucher Number:</label><input type="text" id="voucherNo" name="voucherNo" value="PV-001" required></div>
+      <div class="form-group"><label>Invoice Number:</label><input type="text" id="voucherNo" name="voucherNo" readonly style="background:#f0f0f0;cursor:default"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label for="claimantName">Name:</label><input type="text" id="claimantName" name="claimantName" placeholder="Your Full Name" required></div>
-      <div class="form-group"><label for="icNumber">IC/NRIC Number:</label><input type="text" id="icNumber" name="icNumber" placeholder="S1234567A" required></div>
+      <div class="form-group"><label for="claimantName">Name:</label><input type="text" id="claimantName" name="claimantName" value="Goh Siang Wei" required></div>
+      <div class="form-group"><label for="icNumber">IC/NRIC Number:</label><input type="text" id="icNumber" name="icNumber" value="S9183037Z" required></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label for="bankName">Bank Name:</label><input type="text" id="bankName" name="bankName" placeholder="e.g. DBS, OCBC, UOB" required></div>
-      <div class="form-group"><label for="accountNumber">Bank Account Number:</label><input type="text" id="accountNumber" name="accountNumber" placeholder="123-456789-0" required></div>
+      <div class="form-group"><label for="bankName">Bank Name:</label><input type="text" id="bankName" name="bankName" value="OCBC" required></div>
+      <div class="form-group"><label for="accountNumber">Bank Account Number:</label><input type="text" id="accountNumber" name="accountNumber" value="643-405103-001" required></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label for="currency">Currency:</label>
@@ -206,14 +206,14 @@
           <option value="SGD" selected>SGD (S$)</option><option value="USD">USD ($)</option><option value="EUR">EUR (&euro;)</option><option value="GBP">GBP (&pound;)</option><option value="MYR">MYR (RM)</option><option value="VND">VND (&dong;)</option>
         </select>
       </div>
-      <div class="form-group"><label for="totalAmount">Total Amount:</label><input type="number" id="totalAmount" name="totalAmount" step="0.01" placeholder="0.00" readonly></div>
+      <div class="form-group"><label for="totalAmount">Total Amount:</label><input type="number" id="totalAmount" name="totalAmount" step="0.01" value="1540.00" readonly></div>
     </div>
     <div class="form-row">
       <div class="form-group full-width"><label>Expense Items:</label>
         <div id="claimItems">
           <div class="claim-item"><div class="form-row">
-            <div class="form-group"><label>Description:</label><input type="text" class="item-description" placeholder="e.g. Taxi fare, Meal expense" required></div>
-            <div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" placeholder="0.00" oninput="pvCalculateTotal()" required></div>
+            <div class="form-group"><label>Description:</label><input type="text" class="item-description" value="IT Service" required></div>
+            <div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" value="1540" oninput="pvCalculateTotal()" required></div>
             <div class="form-group" style="flex:0.2"><label>&nbsp;</label><button type="button" class="btn-remove" onclick="pvRemoveItem(this)">&times;</button></div>
           </div></div>
         </div>
@@ -224,7 +224,6 @@
     <div class="form-row"><div class="form-group"><label for="claimDate">Submitted Date:</label><input type="date" id="claimDate" name="claimDate" required></div></div>
     <div class="btn-container">
       <button type="button" class="btn-pv" onclick="pvGeneratePDF()">Generate & Download PDF</button>
-      <button type="button" class="btn-reset" onclick="pvResetVoucherNumber()">Reset Voucher No</button>
     </div>
   </form>
 </div>
@@ -474,32 +473,43 @@ function randomFill(){
   document.getElementById('notes').value=pick(s4Pool,1)[0];
   const lastDay=new Date(year,month+1,0).getDate();
   document.getElementById('sigDate').value=`${year}-${pad(month+1)}-${pad(lastDay)}`;
-  generateServiceNo(); showToast('Random data generated!');
+  generateServiceNo(); syncInvoiceDates(); showToast('Random data generated!');
 }
 
-function generateServiceNo(){const y=selYear.value,m=pad(parseInt(selMonth.value)+1);document.getElementById('serviceNo').textContent=`IT-${y}${m}-${String(Math.floor(Math.random()*900000)+100000)}`;}
+function generateServiceNo(){const y=selYear.value,m=pad(parseInt(selMonth.value)+1);document.getElementById('serviceNo').textContent=`IT-${y}${m}-${String(Math.floor(Math.random()*900000)+100000)}`;syncInvoiceFromService();}
 
 // IT Report Init
 initPeriod(); generateServiceNo();
 ['tbl1','tbl2','tbl3'].forEach(tid=>{for(let i=0;i<3;i++)addRow(tid);});
 
 /* ══════════════════════════════════════════════ */
-/* ══════ PAYMENT VOUCHER LOGIC ══════ */
+/* ══════ INVOICE LOGIC ══════ */
 /* ══════════════════════════════════════════════ */
-document.getElementById('pvDate').valueAsDate = new Date();
-document.getElementById('claimDate').valueAsDate = new Date();
-pvInitVoucherNumber(); pvLoadSavedData();
-document.getElementById('voucherNo').addEventListener('input', function(){ document.getElementById('voucherNumber').textContent = this.value; });
 
-function pvInitVoucherNumber(){ let n=localStorage.getItem('voucherCounter')||1; const v=`PV-${String(n).padStart(3,'0')}`; document.getElementById('voucherNo').value=v; document.getElementById('voucherNumber').textContent=v; }
-function pvIncrementVoucherNumber(){ let n=parseInt(localStorage.getItem('voucherCounter')||1); n++; localStorage.setItem('voucherCounter',n); const v=`PV-${String(n).padStart(3,'0')}`; document.getElementById('voucherNo').value=v; document.getElementById('voucherNumber').textContent=v; }
-function pvSaveFormData(){ localStorage.setItem('paymentVoucherData',JSON.stringify({claimantName:document.getElementById('claimantName').value,icNumber:document.getElementById('icNumber').value,bankName:document.getElementById('bankName').value,accountNumber:document.getElementById('accountNumber').value,currency:document.getElementById('currency').value})); }
-function pvLoadSavedData(){ const s=localStorage.getItem('paymentVoucherData'); if(s){const d=JSON.parse(s);document.getElementById('claimantName').value=d.claimantName||'';document.getElementById('icNumber').value=d.icNumber||'';document.getElementById('bankName').value=d.bankName||'';document.getElementById('accountNumber').value=d.accountNumber||'';document.getElementById('currency').value=d.currency||'SGD';} }
-['claimantName','icNumber','bankName','accountNumber','currency'].forEach(id=>document.getElementById(id).addEventListener('input',pvSaveFormData));
+// Sync Invoice No from Service No (IT-YYYYMM-XXXXXX → INV-YYYYMM-XXXXXX)
+function syncInvoiceFromService() {
+  const sn = document.getElementById('serviceNo').textContent;
+  const invNo = sn.replace('IT-', 'INV-');
+  document.getElementById('invoiceNumber').textContent = invNo;
+  document.getElementById('voucherNo').value = invNo;
+}
+
+// Sync dates from IT report sigDate to Invoice
+function syncInvoiceDates() {
+  const sigDate = document.getElementById('sigDate').value;
+  if (sigDate) {
+    document.getElementById('pvDate').value = sigDate;
+    document.getElementById('claimDate').value = sigDate;
+  }
+}
+
+// Init invoice
+syncInvoiceFromService();
+syncInvoiceDates();
+document.getElementById('sigDate').addEventListener('change', syncInvoiceDates);
 
 function pvFormatDate(s){ const d=new Date(s); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
-function pvResetVoucherNumber(){ if(confirm('Reset voucher number back to PV-001?')){localStorage.setItem('voucherCounter',1);pvInitVoucherNumber();} }
-function pvAddItem(){ const c=document.getElementById('claimItems'); const d=document.createElement('div'); d.className='claim-item'; d.innerHTML=`<div class="form-row"><div class="form-group"><label>Description:</label><input type="text" class="item-description" placeholder="e.g. Taxi fare, Meal expense" required></div><div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" placeholder="0.00" oninput="pvCalculateTotal()" required></div><div class="form-group" style="flex:0.2"><label>&nbsp;</label><button type="button" class="btn-remove" onclick="pvRemoveItem(this)">&times;</button></div></div>`; c.appendChild(d); }
+function pvAddItem(){ const c=document.getElementById('claimItems'); const d=document.createElement('div'); d.className='claim-item'; d.innerHTML=`<div class="form-row"><div class="form-group"><label>Description:</label><input type="text" class="item-description" placeholder="Description" required></div><div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" placeholder="0.00" oninput="pvCalculateTotal()" required></div><div class="form-group" style="flex:0.2"><label>&nbsp;</label><button type="button" class="btn-remove" onclick="pvRemoveItem(this)">&times;</button></div></div>`; c.appendChild(d); }
 function pvRemoveItem(btn){ const c=document.getElementById('claimItems'); if(c.children.length>1){btn.closest('.claim-item').remove();pvCalculateTotal();}else{alert('At least one item required.');} }
 function pvCalculateTotal(){ let t=0; document.querySelectorAll('#tab-voucher .item-amount').forEach(a=>{if(a.value)t+=parseFloat(a.value);}); document.getElementById('totalAmount').value=t.toFixed(2); }
 
@@ -510,9 +520,9 @@ function pvGeneratePDF(){
   const req=['date','voucherNo','claimantName','icNumber','bankName','accountNumber','currency','claimDate'];
   for(let f of req){if(!data[f]){alert(`Please fill in ${f.replace(/([A-Z])/g,' $1').toLowerCase()}.`);return;}}
   const{jsPDF}=window.jspdf; const doc=new jsPDF();
-  doc.setFontSize(20);doc.setFont(undefined,'bold');doc.text('PAYMENT VOUCHER',105,30,{align:'center'});
+  doc.setFontSize(20);doc.setFont(undefined,'bold');doc.text('INVOICE',105,30,{align:'center'});
   doc.setFontSize(12);doc.setFont(undefined,'normal');
-  doc.text(`Date: ${pvFormatDate(data.date)}`,20,50); doc.text(`Voucher No: ${data.voucherNo}`,150,50);
+  doc.text(`Date: ${pvFormatDate(data.date)}`,20,50); doc.text(`Invoice No: ${data.voucherNo}`,140,50);
   doc.text(`Name: ${data.claimantName}`,20,70); doc.text(`IC/NRIC: ${data.icNumber}`,20,85);
   doc.text(`Bank Name: ${data.bankName}`,20,105); doc.text(`Account Number: ${data.accountNumber}`,20,120);
   doc.text('Expense Items:',20,140); let y=155;
@@ -523,8 +533,8 @@ function pvGeneratePDF(){
   if(data.additionalNotes){y+=20;doc.text('Additional Notes:',20,y);y+=10;const s=doc.splitTextToSize(data.additionalNotes,170);doc.text(s,20,y);y+=s.length*5;}
   y+=20;doc.text(`Submitted Date: ${pvFormatDate(data.claimDate)}`,20,y);y+=20;doc.text('Signature:',20,y);doc.line(20,y+15,100,y+15);
   doc.rect(15,15,180,260);
-  doc.save(`Payment_Voucher_${data.voucherNo}.pdf`);
-  pvIncrementVoucherNumber();
+  doc.save(`Invoice_${data.voucherNo}.pdf`);
+  showToast('Invoice PDF downloaded!');
 }
 </script>
 </body>
