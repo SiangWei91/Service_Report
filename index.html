@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Tools - Report & Payment Request</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.10/vfs_fonts.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root { --primary: #1a5276; --primary-light: #2980b9; --border: #bdc3c7; --row-hover: #eaf2f8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #e8edf1; color: #2c3e50; padding: 0; }
+
+  /* ══════ Tab Navigation ══════ */
+  .tab-nav {
+    max-width: 920px; margin: 0 auto; display: flex;
+    background: #fff; border-bottom: 3px solid var(--primary);
+    border-radius: 8px 8px 0 0; overflow: hidden;
+    box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+    margin-top: 20px;
+  }
+  .tab-nav button {
+    flex: 1; padding: 14px 20px; border: none; background: #ecf0f1;
+    font-size: 15px; font-weight: 700; color: #7f8c8d; cursor: pointer;
+    transition: .2s; position: relative;
+  }
+  .tab-nav button:hover { background: #dfe6e9; }
+  .tab-nav button.active {
+    background: #fff; color: var(--primary);
+    border-bottom: 3px solid var(--primary); margin-bottom: -3px;
+  }
+  .tab-content { display: none; padding: 20px; }
+  .tab-content.active { display: block; }
+
+  /* ══════ Shared Buttons ══════ */
+  .btn { padding: 8px 18px; border: none; border-radius: 5px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .2s; }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-success { background: #27ae60; color: #fff; }
+  .btn-danger  { background: #c0392b; color: #fff; }
+  .btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* ══════ IT Report Tab ══════ */
+  #tab-report .toolbar {
+    max-width: 900px; margin: 0 auto 20px; display: flex; flex-wrap: wrap; gap: 10px;
+    align-items: center; background: #fff; padding: 15px 20px; border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+  }
+  #tab-report .toolbar label { font-weight: 600; font-size: 14px; }
+  #tab-report .toolbar select, #tab-report .toolbar input {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px;
+  }
+  #tab-report .toolbar .spacer { flex: 1; }
+  .report { max-width: 900px; margin: 0 auto; background: #fff; padding: 40px 45px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+  .report-header { text-align: center; margin-bottom: 25px; border-bottom: 3px solid var(--primary); padding-bottom: 15px; }
+  .report-header h1 { font-size: 22px; color: var(--primary); margin-bottom: 4px; }
+  .report-header p { font-size: 13px; color: #7f8c8d; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 30px; margin-bottom: 25px; }
+  .info-grid .field { display: flex; align-items: center; gap: 8px; }
+  .info-grid .field label { font-weight: 600; font-size: 13px; white-space: nowrap; min-width: 130px; }
+  .info-grid .field input { flex: 1; border: none; border-bottom: 1.5px solid var(--border); padding: 5px 4px; font-size: 14px; outline: none; }
+  .info-grid .field input:focus { border-color: var(--primary-light); }
+  .section { margin-bottom: 25px; }
+  .section-title { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 8px; padding: 6px 10px; background: #eaf2f8; border-left: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: center; }
+  #tab-report table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #tab-report table th { background: var(--primary); color: #fff; padding: 8px 6px; text-align: center; font-weight: 600; font-size: 12px; }
+  #tab-report table td { border: 1px solid #ddd; padding: 4px 5px; vertical-align: top; }
+  #tab-report table tr:hover td { background: var(--row-hover); }
+  #tab-report table td:first-child { text-align: center; width: 40px; font-weight: 600; color: #7f8c8d; }
+  #tab-report table input, #tab-report table textarea { width: 100%; border: none; outline: none; font-size: 13px; font-family: inherit; resize: vertical; padding: 2px; background: transparent; }
+  #tab-report table input[type="date"] { cursor: pointer; }
+  #tab-report table textarea { min-height: 28px; }
+  td.del-cell { width: 32px; text-align: center; border: none; vertical-align: middle; }
+  .del-btn { background: none; border: none; color: #c0392b; font-size: 18px; cursor: pointer; line-height: 1; }
+  .del-btn:hover { color: #e74c3c; }
+  .notes-area { width: 100%; min-height: 70px; border: 1px solid var(--border); border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit; resize: vertical; outline: none; }
+  .notes-area:focus { border-color: var(--primary-light); }
+  .signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 30px; margin-top: 20px; padding-top: 15px; border-top: 2px solid var(--border); }
+  .signature-grid .field { display: flex; align-items: center; gap: 8px; }
+  .signature-grid .field label { font-weight: 600; font-size: 13px; white-space: nowrap; min-width: 90px; }
+  .signature-grid .field input { flex: 1; border: none; border-bottom: 1.5px solid var(--border); padding: 5px 4px; font-size: 14px; outline: none; }
+
+  /* ══════ Payment Voucher Tab ══════ */
+  #tab-voucher .pv-container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+  #tab-voucher h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 28px; }
+  #tab-voucher .form-row { display: flex; gap: 20px; margin-bottom: 20px; }
+  #tab-voucher .form-group { flex: 1; }
+  #tab-voucher .form-group.full-width { flex: 100%; }
+  #tab-voucher label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+  #tab-voucher input, #tab-voucher textarea, #tab-voucher select {
+    width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px; transition: border-color 0.3s;
+  }
+  #tab-voucher input:focus, #tab-voucher textarea:focus, #tab-voucher select:focus { outline: none; border-color: #4CAF50; }
+  #tab-voucher textarea { height: 80px; resize: vertical; }
+  #tab-voucher .voucher-header { text-align: center; margin-bottom: 20px; }
+  #tab-voucher .voucher-number { font-size: 18px; font-weight: bold; color: #666; }
+  #tab-voucher .btn-pv { background-color: #4CAF50; color: white; padding: 12px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+  #tab-voucher .btn-pv:hover { background-color: #45a049; }
+  #tab-voucher .btn-remove { background: #f44336; color: #fff; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-size: 16px; }
+  #tab-voucher .btn-add { background: #2196F3; color: #fff; border: none; padding: 8px 16px; border-radius: 5px; font-size: 14px; cursor: pointer; margin-top: 10px; }
+  #tab-voucher .btn-reset { background: #ff9800; color: #fff; border: none; padding: 12px 30px; border-radius: 5px; font-size: 16px; cursor: pointer; margin-left: 15px; }
+  #tab-voucher .btn-container { text-align: center; margin-top: 30px; }
+
+  /* ══════ Print ══════ */
+  @media print { .tab-nav, .toolbar, .no-print, .del-cell, .del-btn { display: none !important; } }
+  @media (max-width: 600px) {
+    #tab-voucher .form-row { flex-direction: column; gap: 0; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════ Tab Navigation ══════ -->
+<div class="tab-nav">
+  <button class="active" onclick="switchTab('tab-report', this)">IT Service Report</button>
+  <button onclick="switchTab('tab-voucher', this)">Payment Request</button>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ══════ TAB 1: IT SERVICE REPORT ══════ -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="tab-content active" id="tab-report">
+
+<div class="toolbar no-print">
+  <label>Month:</label>
+  <select id="selMonth"></select>
+  <label>Year:</label>
+  <input type="number" id="selYear" style="width:90px">
+  <button class="btn btn-primary" onclick="applyPeriod()">Apply</button>
+  <div class="spacer"></div>
+  <button class="btn btn-success" onclick="downloadPDF()">Download PDF</button>
+  <button class="btn btn-outline" onclick="saveToLocal()">Save Draft</button>
+  <button class="btn btn-outline" onclick="loadFromLocal()">Load Draft</button>
+  <button class="btn btn-outline" style="background:#8e44ad;color:#fff;border:none" onclick="randomFill()">Random Fill</button>
+  <button class="btn btn-danger" onclick="resetForm()">Clear All</button>
+</div>
+
+<div class="report" id="report">
+  <div class="report-header">
+    <h1>IT SERVICE REPORT</h1>
+    <p>IT Service / IT Support Department</p>
+    <p style="margin-top:6px;font-size:13px;color:#2c3e50;font-weight:600;">Service No: <span id="serviceNo"></span></p>
+  </div>
+  <div class="info-grid">
+    <div class="field"><label>Name:</label><input type="text" id="infoName" value="Goh Siang Wei"></div>
+    <div class="field"><label>Position:</label><input type="text" id="infoPosition" value="IT Service / IT Support"></div>
+    <div class="field"><label>Reporting Period:</label><input type="text" id="infoPeriod" readonly></div>
+    <div class="field"><label>Company:</label><input type="text" id="infoCompany" value="Li Chuan Food Products (Vietnam) Co., Ltd"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">1. Summary of Work Performed <button class="btn btn-sm btn-primary no-print" onclick="addRow('tbl1')">+ Add Row</button></div>
+    <table id="tbl1"><thead><tr><th>No.</th><th style="width:100px">Date</th><th>Description of Work</th><th style="width:140px">System / Software</th><th style="width:110px">Result / Status</th><th class="no-print" style="width:32px"></th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-title">2. System Maintenance / Support <button class="btn btn-sm btn-primary no-print" onclick="addRow('tbl2')">+ Add Row</button></div>
+    <table id="tbl2"><thead><tr><th>No.</th><th style="width:160px">System / Software</th><th>Work Performed</th><th style="width:110px">Status</th><th class="no-print" style="width:32px"></th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-title">3. Issues / Problems Handled <button class="btn btn-sm btn-primary no-print" onclick="addRow('tbl3')">+ Add Row</button></div>
+    <table id="tbl3"><thead><tr><th>No.</th><th>Issue Description</th><th>Action Taken</th><th style="width:110px">Result</th><th class="no-print" style="width:32px"></th></tr></thead><tbody></tbody></table>
+  </div>
+  <div class="section">
+    <div class="section-title">4. Notes / Recommendations</div>
+    <textarea class="notes-area" id="notes" placeholder="Enter notes or recommendations..."></textarea>
+  </div>
+  <div class="signature-grid">
+    <div class="field"><label>Prepared by:</label><input type="text" id="sigName" value="Goh Siang Wei"></div>
+    <div class="field"><label>Date:</label><input type="date" id="sigDate"></div>
+    <div class="field" style="grid-column: 1 / -1;"><label>Signature:</label>
+      <div style="border-bottom:1.5px dashed var(--border);flex:1;padding:4px 0;">
+        <img src="https://jbpvqlvlokvqpkulisxi.supabase.co/storage/v1/object/public/signatures/SW.png" alt="Signature" style="height:50px;display:block;">
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════ -->
+<!-- ══════ TAB 2: INVOICE ══════ -->
+<!-- ══════════════════════════════════════════════ -->
+<div class="tab-content" id="tab-voucher">
+<div class="pv-container">
+  <h1>Payment Request</h1>
+  <form id="voucherForm">
+    <div class="voucher-header">
+      <div class="voucher-number">PR No: <span id="invoiceNumber"></span></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label for="pvDate">Date:</label><input type="date" id="pvDate" name="date" required></div>
+      <div class="form-group"><label>PR Number:</label><input type="text" id="voucherNo" name="voucherNo" readonly style="background:#f0f0f0;cursor:default"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label for="claimantName">Name:</label><input type="text" id="claimantName" name="claimantName" value="Goh Siang Wei" required></div>
+      <div class="form-group"><label for="icNumber">IC/NRIC Number:</label><input type="text" id="icNumber" name="icNumber" value="S9183037Z" required></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label for="bankName">Bank Name:</label><input type="text" id="bankName" name="bankName" value="OCBC" required></div>
+      <div class="form-group"><label for="accountNumber">Bank Account Number:</label><input type="text" id="accountNumber" name="accountNumber" value="643-405103-001" required></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label for="currency">Currency:</label>
+        <select id="currency" name="currency" required>
+          <option value="SGD" selected>SGD (S$)</option><option value="USD">USD ($)</option><option value="EUR">EUR (&euro;)</option><option value="GBP">GBP (&pound;)</option><option value="MYR">MYR (RM)</option><option value="VND">VND (&dong;)</option>
+        </select>
+      </div>
+      <div class="form-group"><label for="totalAmount">Total Amount:</label><input type="number" id="totalAmount" name="totalAmount" step="0.01" value="1540.00" readonly></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group full-width"><label>Expense Items:</label>
+        <div id="claimItems">
+          <div class="claim-item"><div class="form-row">
+            <div class="form-group"><label>Description:</label><input type="text" class="item-description" value="IT Service" required></div>
+            <div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" value="1540" oninput="pvCalculateTotal()" required></div>
+            <div class="form-group" style="flex:0.2"><label>&nbsp;</label><button type="button" class="btn-remove" onclick="pvRemoveItem(this)">&times;</button></div>
+          </div></div>
+        </div>
+        <button type="button" class="btn-add" onclick="pvAddItem()">+ Add Item</button>
+      </div>
+    </div>
+    <div class="form-row"><div class="form-group full-width"><label for="additionalNotes">Additional Notes (Optional):</label><textarea id="additionalNotes" name="additionalNotes" placeholder="Any additional information or notes"></textarea></div></div>
+    <div class="form-row"><div class="form-group"><label for="claimDate">Submitted Date:</label><input type="date" id="claimDate" name="claimDate" required></div></div>
+    <div class="btn-container">
+      <button type="button" class="btn-pv" onclick="pvGeneratePDF()">Generate & Download PDF</button>
+    </div>
+  </form>
+</div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════ */
+/* ══════ TAB SWITCHING ══════ */
+/* ══════════════════════════════════════════════ */
+function switchTab(tabId, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ══════════════════════════════════════════════ */
+/* ══════ IT SERVICE REPORT LOGIC ══════ */
+/* ══════════════════════════════════════════════ */
+const rowTemplates = {
+  tbl1: (n) => `<td>${n}</td><td><input type="date"></td><td><textarea placeholder="Description..."></textarea></td><td><input type="text" placeholder="System/Software"></td><td><input type="text" placeholder="Status"></td><td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Remove">&times;</button></td>`,
+  tbl2: (n) => `<td>${n}</td><td><input type="text" placeholder="System/Software"></td><td><textarea placeholder="Work performed..."></textarea></td><td><input type="text" placeholder="Status"></td><td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Remove">&times;</button></td>`,
+  tbl3: (n) => `<td>${n}</td><td><textarea placeholder="Issue description..."></textarea></td><td><textarea placeholder="Action taken..."></textarea></td><td><input type="text" placeholder="Result"></td><td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Remove">&times;</button></td>`
+};
+function addRow(tableId, count) { const tbody = document.getElementById(tableId).querySelector('tbody'); const n = count || tbody.rows.length + 1; const tr = document.createElement('tr'); tr.innerHTML = rowTemplates[tableId](n); tbody.appendChild(tr); }
+function delRow(btn) { const tr = btn.closest('tr'); const tbody = tr.parentElement; const tableId = tbody.parentElement.id; tr.remove(); renumber(tableId); }
+function renumber(tableId) { const rows = document.getElementById(tableId).querySelector('tbody').rows; for (let i = 0; i < rows.length; i++) rows[i].cells[0].textContent = i + 1; }
+
+const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const selMonth = document.getElementById('selMonth');
+const selYear  = document.getElementById('selYear');
+months.forEach((m, i) => { const opt = document.createElement('option'); opt.value = i; opt.textContent = m; selMonth.appendChild(opt); });
+function initPeriod() { const now = new Date(); selMonth.value = now.getMonth(); selYear.value = now.getFullYear(); applyPeriod(); }
+function applyPeriod() { document.getElementById('infoPeriod').value = `${months[selMonth.value]} ${selYear.value}`; }
+
+// Signature preload
+let signatureBase64 = null;
+(function() { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = function() { const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext('2d').drawImage(img, 0, 0); signatureBase64 = c.toDataURL('image/png'); }; img.src = 'https://jbpvqlvlokvqpkulisxi.supabase.co/storage/v1/object/public/signatures/SW.png'; })();
+
+function getTableData(tid) { const rows = []; document.getElementById(tid).querySelectorAll('tbody tr').forEach(tr => { const cells = []; tr.querySelectorAll('input, textarea').forEach(inp => cells.push(inp.value)); rows.push(cells); }); return rows.filter(r => r.some(c => c.trim() !== '')); }
+function fmtDate(v) { if (!v) return ''; const d = new Date(v + 'T00:00:00'); return d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' }); }
+
+function downloadPDF() {
+  const P = '#1a5276', G = '#95a5a6';
+  const serviceNo = document.getElementById('serviceNo').textContent;
+  const infoName = document.getElementById('infoName').value, infoPosition = document.getElementById('infoPosition').value;
+  const infoPeriod = document.getElementById('infoPeriod').value, infoCompany = document.getElementById('infoCompany').value;
+  const notes = document.getElementById('notes').value, sigName = document.getElementById('sigName').value;
+  const sigDate = fmtDate(document.getElementById('sigDate').value);
+  const tbl1 = getTableData('tbl1'), tbl2 = getTableData('tbl2'), tbl3 = getTableData('tbl3');
+  const sH = (t) => ({ text: t, fontSize: 11, bold: true, color: P, margin: [0,12,0,5], background: '#eaf2f8' });
+  const th = (t) => ({ text: t, bold: true, fontSize: 8.5, color: '#fff', fillColor: P, alignment: 'center', margin: [0,3] });
+  const td = (t, o) => Object.assign({ text: t||'', fontSize: 8.5, margin: [2,3] }, o||{});
+  const tdN = (n) => ({ text: String(n), fontSize: 8.5, alignment: 'center', color: G, bold: true, margin: [0,3] });
+  const tl = { hLineWidth:()=>0.5, vLineWidth:()=>0.5, hLineColor:()=>'#ccc', vLineColor:()=>'#ccc' };
+
+  const t1B = [[th('No.'),th('Date'),th('Description of Work'),th('System / Software'),th('Result / Status')]];
+  tbl1.forEach((r,i) => t1B.push([tdN(i+1),td(fmtDate(r[0])),td(r[1]),td(r[2]),td(r[3])]));
+  if(!tbl1.length) t1B.push([td(''),td(''),td(''),td(''),td('')]);
+  const t2B = [[th('No.'),th('System / Software'),th('Work Performed'),th('Status')]];
+  tbl2.forEach((r,i) => t2B.push([tdN(i+1),td(r[0]),td(r[1]),td(r[2])]));
+  if(!tbl2.length) t2B.push([td(''),td(''),td(''),td('')]);
+  const t3B = [[th('No.'),th('Issue Description'),th('Action Taken'),th('Result')]];
+  tbl3.forEach((r,i) => t3B.push([tdN(i+1),td(r[0]),td(r[1]),td(r[2])]));
+  if(!tbl3.length) t3B.push([td(''),td(''),td(''),td('')]);
+
+  const sig = [
+    { canvas:[{type:'line',x1:0,y1:0,x2:515,y2:0,lineWidth:1.5,lineColor:'#bdc3c7'}], margin:[0,15,0,8] },
+    { columns:[{text:[{text:'Prepared by:  ',bold:true,fontSize:9},{text:sigName,fontSize:10}]},{text:[{text:'Date:  ',bold:true,fontSize:9},{text:sigDate,fontSize:10}]}], margin:[0,0,0,8] }
+  ];
+  if(signatureBase64) sig.push({columns:[{text:'Signature:',bold:true,fontSize:9,width:65,margin:[0,12,0,0]},{image:signatureBase64,width:100,height:40}]});
+  else sig.push({text:[{text:'Signature:  ',bold:true,fontSize:9},{text:'________________________',color:G}],margin:[0,5,0,0]});
+
+  const dd = { pageSize:'A4', pageMargins:[40,40,40,40], defaultStyle:{font:'Roboto'}, content:[
+    {text:'IT SERVICE REPORT',fontSize:18,bold:true,color:P,alignment:'center'},
+    {text:'IT Service / IT Support Department',fontSize:10,color:G,alignment:'center',margin:[0,2,0,3]},
+    {text:'Service No: '+serviceNo,fontSize:10,bold:true,alignment:'center',margin:[0,0,0,8]},
+    {canvas:[{type:'line',x1:0,y1:0,x2:515,y2:0,lineWidth:2,lineColor:P}],margin:[0,0,0,12]},
+    {columns:[{text:[{text:'Name:  ',bold:true,fontSize:9},{text:infoName,fontSize:10}]},{text:[{text:'Position:  ',bold:true,fontSize:9},{text:infoPosition,fontSize:10}]}],margin:[0,0,0,5]},
+    {columns:[{text:[{text:'Reporting Period:  ',bold:true,fontSize:9},{text:infoPeriod,fontSize:10}]},{text:[{text:'Company:  ',bold:true,fontSize:9},{text:infoCompany,fontSize:10}]}],margin:[0,0,0,10]},
+    sH('1. Summary of Work Performed'), {table:{headerRows:1,widths:[25,58,'*',90,65],body:t1B},layout:tl},
+    sH('2. System Maintenance / Support'), {table:{headerRows:1,widths:[25,110,'*',65],body:t2B},layout:tl},
+    sH('3. Issues / Problems Handled'), {table:{headerRows:1,widths:[25,'*','*',65],body:t3B},layout:tl},
+    sH('4. Notes / Recommendations'), {text:notes||' ',fontSize:9,margin:[0,0,0,0]},
+    ...sig
+  ]};
+  pdfMake.createPdf(dd).download(`IT_Report_${infoName.trim().replace(/\s+/g,'_')}_${infoPeriod.replace(/\s+/g,'_')}.pdf`);
+  setTimeout(()=>pvGeneratePDF(),500);
+  showToast('Both PDFs downloading!');
+}
+
+function gatherData() {
+  const data = { infoName:document.getElementById('infoName').value, infoPosition:document.getElementById('infoPosition').value, infoPeriod:document.getElementById('infoPeriod').value, infoCompany:document.getElementById('infoCompany').value, notes:document.getElementById('notes').value, sigName:document.getElementById('sigName').value, sigDate:document.getElementById('sigDate').value, tables:{} };
+  ['tbl1','tbl2','tbl3'].forEach(tid => { const rows=[]; document.getElementById(tid).querySelectorAll('tbody tr').forEach(tr => { const cells=[]; tr.querySelectorAll('input, textarea').forEach(inp => cells.push(inp.value)); rows.push(cells); }); data.tables[tid]=rows; });
+  return data;
+}
+function fillData(data) {
+  document.getElementById('infoName').value=data.infoName||''; document.getElementById('infoPosition').value=data.infoPosition||'';
+  document.getElementById('infoPeriod').value=data.infoPeriod||''; document.getElementById('infoCompany').value=data.infoCompany||'';
+  document.getElementById('notes').value=data.notes||''; document.getElementById('sigName').value=data.sigName||''; document.getElementById('sigDate').value=data.sigDate||'';
+  ['tbl1','tbl2','tbl3'].forEach(tid => { const tbody=document.getElementById(tid).querySelector('tbody'); tbody.innerHTML=''; (data.tables[tid]||[]).forEach((cells,i) => { addRow(tid,i+1); const inputs=tbody.rows[i].querySelectorAll('input, textarea'); cells.forEach((v,j) => { if(inputs[j]) inputs[j].value=v; }); }); });
+}
+function saveToLocal() { const key='itreport_'+document.getElementById('infoPeriod').value.replace(/\s+/g,'_'); localStorage.setItem(key,JSON.stringify(gatherData())); localStorage.setItem('itreport_last',key); showToast('Draft saved!'); }
+function loadFromLocal() { const keys=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('itreport_')&&k!=='itreport_last')keys.push(k);} if(!keys.length){showToast('No saved drafts found.');return;} const choice=prompt('Saved drafts:\n'+keys.map((k,i)=>`${i+1}. ${k.replace('itreport_','')}`).join('\n')+'\n\nEnter number:'); if(!choice)return; const idx=parseInt(choice)-1; if(idx>=0&&idx<keys.length){fillData(JSON.parse(localStorage.getItem(keys[idx])));showToast('Draft loaded!');} }
+function resetForm() { if(!confirm('Clear all fields?'))return; document.querySelectorAll('.report input, .report textarea').forEach(el=>{if(['infoPosition','infoName','infoCompany','sigName'].includes(el.id))return;el.value='';}); document.getElementById('infoName').value='Goh Siang Wei'; document.getElementById('infoCompany').value='Li Chuan Food Products (Vietnam) Co., Ltd'; document.getElementById('sigName').value='Goh Siang Wei'; ['tbl1','tbl2','tbl3'].forEach(tid=>{document.getElementById(tid).querySelector('tbody').innerHTML='';for(let i=0;i<3;i++)addRow(tid);}); initPeriod(); }
+
+function showToast(msg) { const t=document.createElement('div'); t.textContent=msg; Object.assign(t.style,{position:'fixed',bottom:'30px',right:'30px',background:'#1a5276',color:'#fff',padding:'12px 24px',borderRadius:'6px',fontSize:'14px',fontWeight:'600',zIndex:'10000',boxShadow:'0 4px 12px rgba(0,0,0,.2)',transition:'opacity .3s'}); document.body.appendChild(t); setTimeout(()=>{t.style.opacity='0';},1800); setTimeout(()=>t.remove(),2200); }
+
+/* Random Data */
+const pick=(a,n)=>[...a].sort(()=>Math.random()-0.5).slice(0,n);
+const randInt=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pad=(n)=>String(n).padStart(2,'0');
+function randDates(c){const y=parseInt(selYear.value),m=parseInt(selMonth.value),d=new Date(y,m+1,0).getDate(),r=[];for(let i=0;i<c;i++)r.push(`${y}-${pad(m+1)}-${pad(randInt(1,d))}`);return r.sort();}
+
+const s1Pool=[
+{desc:'Developed new Purchase Order module with approval workflow logic',sys:'ERP System',status:'Completed'},
+{desc:'Fixed calculation error in production cost report module',sys:'ERP System',status:'Resolved'},
+{desc:'Created new inventory adjustment form with audit trail logging',sys:'ERP - Inventory Module',status:'Completed'},
+{desc:'Modified Sales Order logic to auto-calculate discount based on customer tier',sys:'ERP - Sales Module',status:'Completed'},
+{desc:'Built monthly production summary report with export to Excel function',sys:'ERP - Reporting',status:'Completed'},
+{desc:'Reviewed and corrected duplicate entries in raw material master data',sys:'ERP - Database',status:'Completed'},
+{desc:'Developed Goods Received Note (GRN) module linked to Purchase Order',sys:'ERP System',status:'Completed'},
+{desc:'Updated BOM (Bill of Materials) logic to support multi-level components',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Fixed bug where stock quantity showed negative after batch adjustment',sys:'ERP - Inventory Module',status:'Resolved'},
+{desc:'Created user role permission matrix for warehouse staff access control',sys:'ERP - Admin Module',status:'Completed'},
+{desc:'Built dashboard showing daily production output vs target KPI',sys:'ERP - Dashboard',status:'Completed'},
+{desc:'Modified invoice generation logic to include tax calculation for Vietnam regulations',sys:'ERP - Accounting Module',status:'Completed'},
+{desc:'Audited database for incorrect product pricing entries and corrected them',sys:'ERP - Database',status:'Completed'},
+{desc:'Developed batch tracking module for raw material traceability',sys:'ERP - Quality Module',status:'Completed'},
+{desc:'Fixed issue where production order status not updating after completion',sys:'ERP - Production Module',status:'Resolved'},
+{desc:'Created automated stock reorder alert when inventory falls below minimum level',sys:'ERP - Inventory Module',status:'Completed'},
+{desc:'Built supplier performance report based on delivery time and quality data',sys:'ERP - Purchasing Module',status:'Completed'},
+{desc:'Reviewed user input data in Sales module, found and corrected wrong unit prices',sys:'ERP - Sales Module',status:'Completed'},
+{desc:'Developed delivery order printout with barcode for warehouse scanning',sys:'ERP - Logistics Module',status:'Completed'},
+{desc:'Optimized slow database query in inventory report, reduced load time from 30s to 3s',sys:'ERP - Database',status:'Completed'},
+{desc:'Added new fields to customer master data for credit limit and payment terms',sys:'ERP - Sales Module',status:'Completed'},
+{desc:'Fixed rounding error in weight conversion between kg and ton in production module',sys:'ERP - Production Module',status:'Resolved'},
+{desc:'Created warehouse location management module with bin/rack assignment',sys:'ERP - Warehouse Module',status:'Completed'},
+{desc:'Monitored daily data entry by warehouse staff, corrected wrong quantity inputs',sys:'ERP - Inventory Module',status:'Completed'},
+{desc:'Built employee attendance integration module linking to fingerprint system',sys:'ERP - HR Module',status:'Completed'},
+{desc:'Developed raw material consumption report by production batch',sys:'ERP - Reporting',status:'Completed'},
+{desc:'Fixed logic error in FIFO costing method for finished goods valuation',sys:'ERP - Accounting Module',status:'Resolved'},
+{desc:'Created Quality Control checklist module for incoming raw materials',sys:'ERP - Quality Module',status:'Completed'},
+{desc:'Modified production planning module to support weekly scheduling view',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Checked and cleaned up orphan records in transaction database tables',sys:'ERP - Database',status:'Completed'},
+{desc:'Built customer outstanding balance report with aging analysis',sys:'ERP - Accounting Module',status:'Completed'},
+{desc:'Developed stock transfer module between warehouse locations',sys:'ERP - Inventory Module',status:'Completed'},
+{desc:'Fixed permission bug where users could edit locked/approved purchase orders',sys:'ERP - Admin Module',status:'Resolved'},
+{desc:'Created product label printing function with QR code from ERP data',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Reviewed production data entries, corrected mismatched batch numbers',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Built automated monthly closing process for inventory valuation',sys:'ERP - Accounting Module',status:'Completed'},
+{desc:'Developed machine maintenance scheduling module with notification alerts',sys:'ERP - Maintenance Module',status:'Completed'},
+{desc:'Fixed date format inconsistency issue across different ERP modules',sys:'ERP System',status:'Resolved'},
+{desc:'Created packing list module linked to Sales Order and Delivery Order',sys:'ERP - Logistics Module',status:'Completed'},
+{desc:'Audited accounting entries for month-end, identified and fixed posting errors',sys:'ERP - Accounting Module',status:'Completed'},
+{desc:'Built raw material price comparison report across multiple suppliers',sys:'ERP - Purchasing Module',status:'Completed'},
+{desc:'Developed container loading plan module for export shipments',sys:'ERP - Logistics Module',status:'Completed'},
+{desc:'Fixed issue where ERP report export to PDF was cutting off table columns',sys:'ERP - Reporting',status:'Resolved'},
+{desc:'Created finished goods shelf-life tracking with expiry date alerts',sys:'ERP - Quality Module',status:'Completed'},
+{desc:'Modified Purchase Request approval workflow to include department head sign-off',sys:'ERP - Purchasing Module',status:'Completed'},
+{desc:'Reviewed warehouse staff stock-in data, corrected entries with wrong lot numbers',sys:'ERP - Inventory Module',status:'Completed'},
+{desc:'Built production yield analysis report comparing actual vs standard output',sys:'ERP - Reporting',status:'Completed'},
+{desc:'Developed vendor payment tracking module with due date reminders',sys:'ERP - Accounting Module',status:'Completed'},
+{desc:'Fixed bug where deleting a line item in Sales Order did not recalculate total',sys:'ERP - Sales Module',status:'Resolved'},
+{desc:'Created inter-department material request and approval module',sys:'ERP System',status:'Completed'},
+{desc:'Optimized database indexes on frequently queried inventory tables',sys:'ERP - Database',status:'Completed'},
+{desc:'Built production downtime logging module for machine efficiency tracking',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Reviewed and corrected wrong supplier codes linked to purchase transactions',sys:'ERP - Database',status:'Completed'},
+{desc:'Developed sample request tracking module for R&D department',sys:'ERP - R&D Module',status:'Completed'},
+{desc:'Fixed currency conversion logic for foreign supplier invoices',sys:'ERP - Accounting Module',status:'Resolved'},
+{desc:'Created daily production input form with validation rules to prevent wrong entries',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Built document attachment feature for Purchase Orders and invoices',sys:'ERP System',status:'Completed'},
+{desc:'Monitored ERP system performance, identified and resolved slow module loading',sys:'ERP - Database',status:'Resolved'},
+{desc:'Developed waste/scrap recording module linked to production batches',sys:'ERP - Production Module',status:'Completed'},
+{desc:'Created data backup verification report and tested database restore procedure',sys:'ERP - Database',status:'Completed'},
+];
+const s2Pool=[
+{sys:'ERP - Database',work:'Performed monthly database optimization, rebuilt indexes and cleared temp tables',status:'Completed'},
+{sys:'ERP System',work:'Deployed latest system patches and bug fixes to production server',status:'Updated'},
+{sys:'ERP - Database',work:'Verified daily automated backup and tested data restore procedure',status:'Normal'},
+{sys:'ERP - Admin Module',work:'Reviewed user access permissions, deactivated unused accounts',status:'Completed'},
+{sys:'ERP - Reporting',work:'Optimized report generation queries to improve loading speed',status:'Optimized'},
+{sys:'ERP - Database',work:'Monitored database disk space usage and archived old transaction logs',status:'Healthy'},
+{sys:'ERP System',work:'Checked all module functionalities after server maintenance window',status:'Operational'},
+{sys:'ERP - Database',work:'Ran data integrity check across all master data tables',status:'Completed'},
+{sys:'ERP - Inventory Module',work:'Reconciled physical stock count with system records and adjusted differences',status:'Completed'},
+{sys:'ERP System',work:'Updated SSL certificate and security configurations on ERP web server',status:'Updated'},
+{sys:'ERP - Database',work:'Cleaned up duplicate records and orphan data in transaction tables',status:'Completed'},
+{sys:'ERP - Accounting Module',work:'Performed month-end closing procedures and verified posting accuracy',status:'Completed'},
+{sys:'ERP System',work:'Monitored system uptime and server resource utilization throughout the month',status:'Stable'},
+{sys:'ERP - Production Module',work:'Reviewed production workflow configurations and corrected routing errors',status:'Completed'},
+{sys:'ERP - Database',work:'Performed full database backup before scheduled system upgrade',status:'Completed'},
+{sys:'ERP - Admin Module',work:'Updated password policy and enforced multi-factor authentication for admin users',status:'Completed'},
+{sys:'ERP System',work:'Tested disaster recovery plan with simulated failover to backup server',status:'Tested'},
+{sys:'ERP - Reporting',work:'Reviewed and updated automated report scheduling for management dashboards',status:'Updated'},
+{sys:'ERP - Database',work:'Migrated archived data to cold storage to free up primary database space',status:'Completed'},
+{sys:'ERP System',work:'Conducted system health check and documented performance baseline metrics',status:'Normal'},
+];
+const s3Pool=[
+{issue:'ERP system running slow during peak hours with multiple concurrent users',action:'Optimized database queries, increased server memory allocation, and added connection pooling',result:'Resolved'},
+{issue:'Production module showing incorrect BOM quantities after recent update',action:'Rolled back logic change, corrected formula and redeployed the fix',result:'Resolved'},
+{issue:'Users reported inventory count mismatch between ERP and physical stock',action:'Audited transaction logs, found unapproved adjustments, corrected entries and retrained staff',result:'Resolved'},
+{issue:'ERP report exporting blank pages when generating PDF for large datasets',action:'Fixed pagination logic and increased memory buffer for report generation',result:'Resolved'},
+{issue:'Sales Order approval workflow stuck, orders not moving to next approval stage',action:'Identified misconfigured approval rule, corrected workflow routing logic',result:'Resolved'},
+{issue:'Database connection timeout errors during month-end closing process',action:'Increased connection timeout setting, optimized closing stored procedures',result:'Resolved'},
+{issue:'Wrong unit price pulled into Purchase Order from outdated supplier price list',action:'Updated supplier price master data, added validation check before PO creation',result:'Resolved'},
+{issue:'Production staff entered wrong batch numbers causing traceability data errors',action:'Corrected batch records in database, implemented barcode scanning to prevent manual errors',result:'Resolved'},
+{issue:'ERP dashboard not refreshing data, showing yesterday figures',action:'Fixed scheduled job that was failing silently, restarted data sync service',result:'Resolved'},
+{issue:'Duplicate customer records found in master data causing invoice confusion',action:'Merged duplicate records, reassigned linked transactions, added duplicate check on creation',result:'Resolved'},
+{issue:'Accounting module posting entries to wrong fiscal period after year-end',action:'Corrected fiscal period configuration and reposted affected transactions',result:'Resolved'},
+{issue:'Warehouse staff unable to print delivery orders from ERP system',action:'Fixed printer mapping configuration in ERP settings, updated print template',result:'Resolved'},
+{issue:'ERP backup job failed overnight due to insufficient disk space',action:'Freed disk space by archiving old logs, expanded backup storage, verified next backup success',result:'Resolved'},
+{issue:'GRN module not deducting quantity from open Purchase Order correctly',action:'Found logic error in partial receipt calculation, patched and tested the fix',result:'Resolved'},
+{issue:'User accidentally approved a wrong Purchase Order with inflated quantities',action:'Reversed the PO approval, corrected quantities, added confirmation prompt before approval',result:'Resolved'},
+{issue:'Inventory valuation report showing negative cost for certain items',action:'Traced to incorrect stock adjustment entry, corrected cost records and recalculated valuation',result:'Resolved'},
+{issue:'ERP login page not loading after server restart',action:'Web service did not auto-start, configured auto-start and restarted the service manually',result:'Resolved'},
+{issue:'Production schedule module conflicting when two users edit same order',action:'Implemented record locking mechanism to prevent concurrent edit conflicts',result:'Resolved'},
+{issue:'Wrong tax rate applied to domestic invoices after tax regulation update',action:'Updated tax rate configuration in accounting module and regenerated affected invoices',result:'Resolved'},
+{issue:'Data import from Excel failing due to format mismatch in date columns',action:'Standardized date format in import template and added format validation before import',result:'Resolved'},
+];
+const s4Pool=[
+'ERP system performance is stable this month. Database optimization has improved report loading speed significantly.',
+'Recommend conducting a quarterly data audit to catch input errors early before they affect reports.',
+'Suggest scheduling ERP training for new warehouse staff to reduce data entry mistakes.',
+'Ongoing development of new modules is on track. Will prioritize production planning module next month.',
+'Database backup and recovery procedures have been tested successfully. No issues found.',
+'Recommend implementing barcode scanning at all data entry points to minimize manual input errors.',
+'Suggest upgrading the ERP database server hardware to support growing transaction volume.',
+'All reported ERP bugs have been resolved this month. System is stable for daily operations.',
+'Recommend adding data validation rules to prevent common input mistakes by operators.',
+'ERP user access review completed. Removed unnecessary admin privileges from 3 accounts.',
+'Suggest creating a standard operating procedure (SOP) document for all ERP modules.',
+'Plan to develop a mobile-friendly ERP dashboard for management to view KPIs on the go.',
+'Recommend periodic review of ERP workflows to ensure they still match actual business processes.',
+'Database storage usage is at 65%. Plan to archive data older than 2 years next quarter.',
+'Suggest implementing automated email notifications for key ERP events like PO approvals and stock alerts.',
+];
+
+function randomFill(){
+  ['tbl1','tbl2','tbl3'].forEach(tid=>document.getElementById(tid).querySelector('tbody').innerHTML='');
+  const month=parseInt(selMonth.value), year=parseInt(selYear.value);
+  const s1C=randInt(1,2),s1I=pick(s1Pool,s1C),s1D=randDates(s1C);
+  s1I.forEach((item,i)=>{addRow('tbl1',i+1);const ins=document.getElementById('tbl1').querySelector('tbody').rows[i].querySelectorAll('input, textarea');ins[0].value=s1D[i];ins[1].value=item.desc;ins[2].value=item.sys;ins[3].value=item.status;});
+  const s2C=randInt(1,2),s2I=pick(s2Pool,s2C);
+  s2I.forEach((item,i)=>{addRow('tbl2',i+1);const ins=document.getElementById('tbl2').querySelector('tbody').rows[i].querySelectorAll('input, textarea');ins[0].value=item.sys;ins[1].value=item.work;ins[2].value=item.status;});
+  const s3C=randInt(1,2),s3I=pick(s3Pool,s3C);
+  s3I.forEach((item,i)=>{addRow('tbl3',i+1);const ins=document.getElementById('tbl3').querySelector('tbody').rows[i].querySelectorAll('input, textarea');ins[0].value=item.issue;ins[1].value=item.action;ins[2].value=item.result;});
+  document.getElementById('notes').value=pick(s4Pool,1)[0];
+  const lastDay=new Date(year,month+1,0).getDate();
+  document.getElementById('sigDate').value=`${year}-${pad(month+1)}-${pad(lastDay)}`;
+  generateServiceNo(); syncInvoiceDates(); showToast('Random data generated!');
+}
+
+function generateServiceNo(){const y=selYear.value,m=pad(parseInt(selMonth.value)+1);document.getElementById('serviceNo').textContent=`IT-${y}${m}-${String(Math.floor(Math.random()*900000)+100000)}`;syncInvoiceFromService();}
+
+// IT Report Init
+initPeriod(); generateServiceNo();
+['tbl1','tbl2','tbl3'].forEach(tid=>{for(let i=0;i<3;i++)addRow(tid);});
+
+/* ══════════════════════════════════════════════ */
+/* ══════ INVOICE LOGIC ══════ */
+/* ══════════════════════════════════════════════ */
+
+// Sync PR No from Service No (IT-YYYYMM-XXXXXX → PR-YYYYMM-XXXXXX)
+function syncInvoiceFromService() {
+  const sn = document.getElementById('serviceNo').textContent;
+  const prNo = sn.replace('IT-', 'PR-');
+  document.getElementById('invoiceNumber').textContent = prNo;
+  document.getElementById('voucherNo').value = prNo;
+}
+
+// Sync dates from IT report sigDate to Payment Request
+function syncInvoiceDates() {
+  const sigDate = document.getElementById('sigDate').value;
+  if (sigDate) {
+    document.getElementById('pvDate').value = sigDate;
+    document.getElementById('claimDate').value = sigDate;
+  }
+}
+
+// Init invoice
+syncInvoiceFromService();
+syncInvoiceDates();
+document.getElementById('sigDate').addEventListener('change', syncInvoiceDates);
+
+function pvFormatDate(s){ const d=new Date(s); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
+function pvAddItem(){ const c=document.getElementById('claimItems'); const d=document.createElement('div'); d.className='claim-item'; d.innerHTML=`<div class="form-row"><div class="form-group"><label>Description:</label><input type="text" class="item-description" placeholder="Description" required></div><div class="form-group" style="flex:0.5"><label>Amount:</label><input type="number" class="item-amount" step="0.01" placeholder="0.00" oninput="pvCalculateTotal()" required></div><div class="form-group" style="flex:0.2"><label>&nbsp;</label><button type="button" class="btn-remove" onclick="pvRemoveItem(this)">&times;</button></div></div>`; c.appendChild(d); }
+function pvRemoveItem(btn){ const c=document.getElementById('claimItems'); if(c.children.length>1){btn.closest('.claim-item').remove();pvCalculateTotal();}else{alert('At least one item required.');} }
+function pvCalculateTotal(){ let t=0; document.querySelectorAll('#tab-voucher .item-amount').forEach(a=>{if(a.value)t+=parseFloat(a.value);}); document.getElementById('totalAmount').value=t.toFixed(2); }
+
+function pvGeneratePDF(){
+  const items=[]; document.querySelectorAll('#tab-voucher .claim-item').forEach(item=>{const d=item.querySelector('.item-description').value,a=item.querySelector('.item-amount').value;if(d&&a)items.push({description:d,amount:parseFloat(a)});});
+  if(!items.length){alert('Please add at least one item.');return;}
+  const form=new FormData(document.getElementById('voucherForm')); const data=Object.fromEntries(form.entries());
+  const req=['date','voucherNo','claimantName','icNumber','bankName','accountNumber','currency','claimDate'];
+  for(let f of req){if(!data[f]){alert(`Please fill in ${f.replace(/([A-Z])/g,' $1').toLowerCase()}.`);return;}}
+  const{jsPDF}=window.jspdf; const doc=new jsPDF();
+  doc.setFontSize(20);doc.setFont(undefined,'bold');doc.text('PAYMENT REQUEST',105,30,{align:'center'});
+  doc.setFontSize(12);doc.setFont(undefined,'normal');
+  doc.text(`Date: ${pvFormatDate(data.date)}`,20,50); doc.setFontSize(10);doc.text(`PR No: ${data.voucherNo}`,130,50);doc.setFontSize(12);
+  doc.text(`Name: ${data.claimantName}`,20,70); doc.text(`IC/NRIC: ${data.icNumber}`,20,85);
+  doc.text(`Bank Name: ${data.bankName}`,20,105); doc.text(`Account Number: ${data.accountNumber}`,20,120);
+  doc.text('Expense Items:',20,140); let y=155;
+  doc.setFont(undefined,'bold');doc.text('Description',25,y);doc.text('Amount',160,y);doc.line(20,y+3,190,y+3);y+=15;
+  doc.setFont(undefined,'normal'); let total=0;
+  items.forEach(item=>{doc.text(item.description,25,y);doc.text(`${data.currency} ${item.amount.toFixed(2)}`,160,y);total+=item.amount;y+=12;});
+  doc.line(20,y,190,y);y+=10;doc.setFont(undefined,'bold');doc.text(`Total Amount: ${data.currency} ${total.toFixed(2)}`,25,y);doc.setFont(undefined,'normal');
+  if(data.additionalNotes){y+=20;doc.text('Additional Notes:',20,y);y+=10;const s=doc.splitTextToSize(data.additionalNotes,170);doc.text(s,20,y);y+=s.length*5;}
+  y+=20;doc.text(`Submitted Date: ${pvFormatDate(data.claimDate)}`,20,y);y+=20;doc.text('Signature:',20,y);
+  if(signatureBase64){doc.addImage(signatureBase64,'PNG',20,y+3,50,20);}else{doc.line(20,y+15,100,y+15);}
+  doc.rect(15,15,180,260);
+  doc.save(`Payment_Request_${data.voucherNo}.pdf`);
+  showToast('Payment Request PDF downloaded!');
+}
+</script>
+</body>
+</html>
