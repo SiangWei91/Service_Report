@@ -358,7 +358,7 @@ function generateITReport(info, signatureBase64) {
   if (signatureBase64) {
     sig.push({ columns: [
       { text: 'Signature:', bold: true, fontSize: 9, width: 65, margin: [0, 12, 0, 0] },
-      { image: signatureBase64, width: 100, height: 50 }
+      { image: signatureBase64, fit: [100, 50] }
     ]});
   } else {
     sig.push({ text: [{ text: 'Signature:  ', bold: true, fontSize: 9 }, { text: '________________________', color: G }], margin: [0, 5, 0, 0] });
@@ -446,7 +446,7 @@ function generatePaymentRequest(serviceNo, sigDate, signatureBase64) {
   doc.text('Signature:', 20, y);
   if (signatureBase64) {
     try {
-      doc.addImage(signatureBase64, 'PNG', 20, y + 3, 50, 25);
+      doc.addImage(signatureBase64, 'PNG', 20, y + 3, 40, 25);
     } catch (e) {
       console.warn('Could not add signature to Payment Request:', e.message);
       doc.line(20, y + 15, 100, y + 15);
@@ -476,7 +476,7 @@ async function sendEmail(itBuffer, prBuffer, period, itFileName, prFileName) {
 
   const mailOptions = {
     from: process.env.EMAIL_USER,
-    to: process.env.EMAIL_USER,
+    to: `${process.env.EMAIL_USER}, lien@lichuan.com.sg`,
     subject: `IT Service Report & Payment Request - ${period}`,
     text: [
       `Hi,`,
